@@ -52,6 +52,8 @@ class DifferentialEvolution:
                 x_next.x[i] = p_v[i]
             else:
                 x_next.x[i] = p_x[i]
+            # 定義域外の探索防止
+            np.clip(x_next.x[i], self.fnc.axis_range[0], self.fnc.axis_range[1])
         return x_next
 
     # 子個体の生成
