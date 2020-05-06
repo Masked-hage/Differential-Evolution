@@ -46,8 +46,9 @@ class DifferentialEvolution:
     # 交叉(binomial交叉)
     def apply_binomial_Xover(self, p_v, p_x):
         x_next = Solution(self.cnf, self.fnc, parent=None)
+        j_rand = self.cnf.rd.randint(0, self.cnf.prob_dim)
         for i in range(self.cnf.prob_dim):
-            if self.cnf.rd.rand() <= self.cnf.CR or i == self.cnf.rd.randint(0, self.cnf.prob_dim):
+            if self.cnf.rd.rand() <= self.cnf.CR or i == j_rand:
                 x_next.x[i] = p_v[i]
             else:
                 x_next.x[i] = p_x[i]
