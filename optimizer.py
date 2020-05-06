@@ -27,7 +27,6 @@ class DifferentialEvolution:
 
     # 次世代個体群生成
     def getNextPopulation(self):
-        self.mutation()
         self.generateOffspring()
         for i in range(self.cnf.max_pop):
             self.getFitness(self.pop[i + self.cnf.max_pop])
