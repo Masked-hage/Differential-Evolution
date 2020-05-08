@@ -21,7 +21,7 @@ class Configuration:
         # DEの設定
         self.max_pop    = 50                    # 個体数
         #self.max_gen    = 600                  # 最大世代数(今回はmax_evalsで制限)
-        self.scaling    = 0.7                   # スケーリングファクタ
+        self.scaling    = 0.9                   # スケーリングファクタ
         self.CR         = 0.9                   # 継承制御パラメータ
 
         # 問題設定
