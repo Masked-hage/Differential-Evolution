@@ -44,7 +44,7 @@ class DifferentialEvolution:
             num = list(range(self.cnf.max_pop))
             num.remove(i)
             idx = self.cnf.rd.choice(num, 3, replace=False)
-            v = self.pop[i].x + self.cnf.scaling * (self.pop[0].x - self.pop[i].x) + self.cnf.scaling * (self.pop[idx[1]].x - self.pop[idx[2]].x)
+            v = self.pop[i].x + self.cnf.scaling * (self.pop[idx[0]].x - self.pop[i].x) + self.cnf.scaling * (self.pop[idx[1]].x - self.pop[idx[2]].x)
             mut.append(v)
         return mut
 
