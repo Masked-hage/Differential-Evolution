@@ -32,14 +32,14 @@ class DifferentialEvolution:
             self.getFitness(self.pop[i + self.cnf.max_pop])
         self.selection()
 
-    # 変異ベクトルの生成(rand/1)
+    # 変異ベクトルの生成(rand/2)
     def mutation(self):
         mut = []
         for i in range(self.cnf.max_pop):
             num = list(range(self.cnf.max_pop))
             num.remove(i)
-            idx = self.cnf.rd.choice(num, 3, replace=False)
-            v = self.pop[idx[0]].x + self.cnf.scaling * (self.pop[idx[1]].x - self.pop[idx[2]].x)
+            idx = self.cnf.rd.choice(num, 5, replace=False)
+            v = self.pop[idx[0]].x + self.cnf.scaling * (self.pop[idx[1]].x - self.pop[idx[2]].x) + self.cnf.scaling * (self.pop[idx[3]].x - self.pop[idx[4]].x)
             mut.append(v)
         return mut
 
