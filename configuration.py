@@ -22,7 +22,7 @@ class Configuration:
         self.max_pop        = 50                    # 個体数
         #self.max_gen       = 600                   # 最大世代数(今回はmax_evalsで制限)
         self.scaling        = 0.9                   # スケーリングファクタ
-        self.scaling_min    = 0.5                   # スケーリングファクタの下限
+        self.scaling_min    = 0.3                   # スケーリングファクタの下限
         self.scaling_max    = 0.7                   # スケーリングファクタの上限
         self.CR             = 0.9                   # 継承制御パラメータ
 
