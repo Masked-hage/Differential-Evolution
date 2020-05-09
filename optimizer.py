@@ -34,8 +34,8 @@ class DifferentialEvolution:
 
     # 次世代個体群生成
     def getNextPopulation(self):
-        self.generateOffspring()
         self.sort_Population()
+        self.generateOffspring()
         for i in range(self.cnf.max_pop):
             self.getFitness(self.pop[i + self.cnf.max_pop])
         self.selection()
@@ -46,15 +46,14 @@ class DifferentialEvolution:
     def sort_Population(self):
         self.pop.sort(key=lambda func: func.f)
 
-    # 変異ベクトルの生成(current-to-rand/1)
+    # 変異ベクトルの生成(rand/2)
     def mutation(self):
         mut = []
-        scaling = self.cnf.scaling_min + (self.cnf.scaling_max - self.cnf.scaling_min) * self.fnc.total_evals / self.cnf.max_evals
         for i in range(self.cnf.max_pop):
             num = list(range(self.cnf.max_pop))
             num.remove(i)
-            idx = self.cnf.rd.choice(num, 3, replace=False)
-            v = self.pop[i].x + scaling * (self.pop[idx[0]].x - self.pop[i].x) + scaling * (self.pop[idx[1]].x - self.pop[idx[2]].x)
+            idx = self.cnf.rd.choice(num, 5, replace=False)
+            v = self.pop[idx[0]].x + self.pop[i].scaling * (self.pop[idx[1]].x - self.pop[idx[2]].x) + self.pop[i].scaling * (self.pop[idx[3]].x - self.pop[idx[4]].x)
             mut.append(v)
         return mut
 
@@ -63,7 +62,7 @@ class DifferentialEvolution:
         x_next = Solution(self.cnf, self.fnc, self.scaling_means, self.CR_means)
         j_rand = self.cnf.rd.randint(0, self.cnf.prob_dim)
         for i in range(self.cnf.prob_dim):
-            if self.cnf.rd.rand() <= self.cnf.CR or i == j_rand:
+            if self.cnf.rd.rand() <= self.pop[i].CR or i == j_rand:
                 x_next.x[i] = p_v[i]
             else:
                 x_next.x[i] = p_x[i]
@@ -96,8 +95,14 @@ class DifferentialEvolution:
 
     # 平均値の更新
     def update_parameter(self):
-        self.scaling_means = (1 - self.cnf.learning_R) * self.scaling_means + self.cnf.learning_R * self.sum_scaling2 / self.sum_scaling
-        self.CR_means = (1 - self.cnf.learning_R) * self.CR_means + self.cnf.learning_R * self.sum_CR / self.sum_mutNum
+        if self.sum_scaling == 0:
+            self.scaling_means = (1 - self.cnf.learning_R) * self.scaling_means
+        else:
+            self.scaling_means = (1 - self.cnf.learning_R) * self.scaling_means + self.cnf.learning_R * self.sum_scaling2 / self.sum_scaling
+        if self.sum_mutNum == 0:
+            self.CR_means = (1 - self.cnf.learning_R) * self.CR_means
+        else:
+            self.CR_means = (1 - self.cnf.learning_R) * self.CR_means + self.cnf.learning_R * self.sum_CR / self.sum_mutNum
 
     # パラメータのリセット
     def reset_parameter(self):
