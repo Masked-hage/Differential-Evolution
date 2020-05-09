@@ -7,6 +7,7 @@
 # 他ファイル,モジュールのインポート
 import function as fc
 import numpy as np
+from scipy.stats import cauchy
 
 # 差分進化アルゴリズム（実数）クラス
 class DifferentialEvolution:
@@ -17,25 +18,33 @@ class DifferentialEvolution:
         self.cnf = cnf      # 設定
         self.fnc = fnc      # 関数
         self.pop = []       # 個体群
+        self.scaling_means  = 0.5                   #スケーリングファクタの平均値
+        self.CR_means       = 0.5                   # 交叉率の平均値
+        self.sum_mutNum     = 0                     # 淘汰の成功回数
+        self.sum_scaling    = 0.                    # 淘汰成功時のスケーリングファクタの総和
+        self.sum_scaling2   = 0.                    # 淘汰成功時のスケーリングファクタの二乗和
+        self.sum_CR         = 0.                    # 淘汰成功時の交叉率の総和
 
     """ インスタンスメソッド """
     # 初期化
     def initializeSolutions(self):
         for i in range(self.cnf.max_pop):
-            self.pop.append(Solution(self.cnf, self.fnc))
+            self.pop.append(Solution(self.cnf, self.fnc, self.scaling_means, self.CR_means))
             self.getFitness(self.pop[i])
 
     # 次世代個体群生成
     def getNextPopulation(self):
         self.generateOffspring()
-        # self.sort_Population()
+        self.sort_Population()
         for i in range(self.cnf.max_pop):
             self.getFitness(self.pop[i + self.cnf.max_pop])
         self.selection()
+        self.update_parameter()
+        self.reset_parameter()
 
     # 集団Pのソート(昇順)
     def sort_Population(self):
-        sorted(self.pop, key=lambda func: func.f)
+        self.pop.sort(key=lambda func: func.f)
 
     # 変異ベクトルの生成(current-to-rand/1)
     def mutation(self):
@@ -51,7 +60,7 @@ class DifferentialEvolution:
 
     # 交叉(binomial交叉)
     def apply_binomial_Xover(self, p_v, p_x):
-        x_next = Solution(self.cnf, self.fnc, parent=None)
+        x_next = Solution(self.cnf, self.fnc, self.scaling_means, self.CR_means)
         j_rand = self.cnf.rd.randint(0, self.cnf.prob_dim)
         for i in range(self.cnf.prob_dim):
             if self.cnf.rd.rand() <= self.cnf.CR or i == j_rand:
@@ -77,19 +86,41 @@ class DifferentialEvolution:
         for i in range(self.cnf.max_pop):
             if self.pop[i].f >= self.pop[i + self.cnf.max_pop].f:
                 self.pop[i] = self.pop[i + self.cnf.max_pop]
+                self.sum_mutNum += 1
+                self.sum_scaling += self.pop[i + self.cnf.max_pop].scaling
+                self.sum_scaling2 += self.pop[i + self.cnf.max_pop].scaling ** 2
+                self.sum_CR += self.pop[i + self.cnf.max_pop].CR
             else:
                 pass
         del self.pop[self.cnf.max_pop : 2 * self.cnf.max_pop]
+
+    # 平均値の更新
+    def update_parameter(self):
+        self.scaling_means = (1 - self.cnf.learning_R) * self.scaling_means + self.cnf.learning_R * self.sum_scaling2 / self.sum_scaling
+        self.CR_means = (1 - self.cnf.learning_R) * self.CR_means + self.cnf.learning_R * self.sum_CR / self.sum_mutNum
+
+    # パラメータのリセット
+    def reset_parameter(self):
+        self.sum_mutNum     = 0
+        self.sum_scaling    = 0.
+        self.sum_scaling2   = 0.
+        self.sum_CR         = 0.
 
 #個体のクラス
 class Solution:
     """ コンストラクタ """
     # 初期化メソッド
-    def __init__(self, cnf, fnc, parent=None):
-        self.cnf, self.fnc, self.x, self.f = cnf, fnc, [], 0.
+    def __init__(self, cnf, fnc, scaling_ave, CR_ave, parent=None):
+        self.cnf, self.fnc, self.x, self.f, self.scaling, self.CR = cnf, fnc, [], 0., -1., -1.
         # 個体の初期化
         if parent == None:
             self.x = [self.cnf.rd.uniform(self.fnc.axis_range[0], self.fnc.axis_range[1]) for i in range(self.cnf.prob_dim)]
+            while self.scaling < 0.:
+                self.scaling = cauchy.rvs(loc=scaling_ave, scale=self.cnf.param_scaling)
+            if self.scaling > 1.:
+                self.scaling = 1.
+            self.CR = np.random.normal(loc=CR_ave, scale=self.cnf.param_CR)
+            self.CR = np.clip(self.CR, 0., 1.)
         # 親個体のコピー
         else:
             self.x = [parent.x[i] for i in range(self.cnf.prob_dim)]
