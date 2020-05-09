@@ -115,19 +115,15 @@ class DifferentialEvolution:
 class Solution:
     """ コンストラクタ """
     # 初期化メソッド
-    def __init__(self, cnf, fnc, scaling_ave, CR_ave, parent=None):
+    def __init__(self, cnf, fnc, scaling_ave, CR_ave):
         self.cnf, self.fnc, self.x, self.f, self.scaling, self.CR = cnf, fnc, [], 0., -1., -1.
         # 個体の初期化
-        if parent == None:
-            self.x = [self.cnf.rd.uniform(self.fnc.axis_range[0], self.fnc.axis_range[1]) for i in range(self.cnf.prob_dim)]
-            while self.scaling < 0.:
-                self.scaling = cauchy.rvs(loc=scaling_ave, scale=self.cnf.param_scaling)
-            if self.scaling > 1.:
-                self.scaling = 1.
-            self.CR = np.random.normal(loc=CR_ave, scale=self.cnf.param_CR)
-            self.CR = np.clip(self.CR, 0., 1.)
-        # 親個体のコピー
-        else:
-            self.x = [parent.x[i] for i in range(self.cnf.prob_dim)]
+        self.x = [self.cnf.rd.uniform(self.fnc.axis_range[0], self.fnc.axis_range[1]) for i in range(self.cnf.prob_dim)]
+        while self.scaling < 0.:
+            self.scaling = cauchy.rvs(loc=scaling_ave, scale=self.cnf.param_scaling)
+        if self.scaling > 1.:
+            self.scaling = 1.
+        self.CR = np.random.normal(loc=CR_ave, scale=self.cnf.param_CR)
+        self.CR = np.clip(self.CR, 0., 1.)
         # リスト -> ndarray
         self.x = np.array(self.x)
