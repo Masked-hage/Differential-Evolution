@@ -46,14 +46,18 @@ class DifferentialEvolution:
     def sort_Population(self):
         self.pop.sort(key=lambda func: func.f)
 
-    # 変異ベクトルの生成(rand/1)
+    # 変異ベクトルの生成(current-to-pbest/1)
     def mutation(self):
         mut = []
         for i in range(self.cnf.max_pop):
             num = list(range(self.cnf.max_pop))
+            best_num = list(range(int(self.cnf.max_pop * self.cnf.choice_R)))
             num.remove(i)
-            idx = self.cnf.rd.choice(num, 3, replace=False)
-            v = self.pop[idx[0]].x + self.pop[i].scaling * (self.pop[idx[1]].x - self.pop[idx[2]].x)
+            if i in best_num:
+                best_num.remove(i)
+            idx = self.cnf.rd.choice(num, 2, replace=False)
+            b_idx = self.cnf.rd.choice(best_num, 1)
+            v = self.pop[i].x + self.pop[i].scaling * (self.pop[b_idx[0]].x - self.pop[i].x) + self.pop[i].scaling * (self.pop[idx[0]].x - self.pop[idx[1]].x)
             mut.append(v)
         return mut
 

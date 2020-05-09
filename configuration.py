@@ -28,6 +28,7 @@ class Configuration:
         self.param_scaling  = 0.1                   # スケーリングファクタの尺度パラメータ
         self.param_CR       = 0.1                   # 交叉率の標準偏差
         self.learning_R     = 0.1                   # 平均パラメータの学習率
+        self.choice_R       = 0.05                  # current-to-pbestにおける上位選択範囲[%]
 
         # 問題設定
         self.prob_dim       = 20                     # 問題の次元数
