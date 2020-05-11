@@ -15,15 +15,16 @@ class DifferentialEvolution:
     """ コンストラクタ """
     # 初期化メソッド
     def __init__(self, cnf, fnc):
-        self.cnf = cnf      # 設定
-        self.fnc = fnc      # 関数
-        self.pop = []       # 個体群
-        self.scaling_means  = 0.5                   #スケーリングファクタの平均値
-        self.CR_means       = 0.5                   # 交叉率の平均値
-        self.sum_mutNum     = 0                     # 淘汰の成功回数
-        self.sum_scaling    = 0.                    # 淘汰成功時のスケーリングファクタの総和
-        self.sum_scaling2   = 0.                    # 淘汰成功時のスケーリングファクタの二乗和
-        self.sum_CR         = 0.                    # 淘汰成功時の交叉率の総和
+        self.cnf            = cnf       # 設定
+        self.fnc            = fnc       # 関数
+        self.pop            = []        # 個体群
+        self.archive        = []        # 劣解アーカイブ
+        self.scaling_means  = 0.5       # スケーリングファクタの平均値
+        self.CR_means       = 0.5       # 交叉率の平均値
+        self.sum_mutNum     = 0         # 淘汰の成功回数
+        self.sum_scaling    = 0.        # 淘汰成功時のスケーリングファクタの総和
+        self.sum_scaling2   = 0.        # 淘汰成功時のスケーリングファクタの二乗和
+        self.sum_CR         = 0.        # 淘汰成功時の交叉率の総和
 
     """ インスタンスメソッド """
     # 初期化
@@ -39,6 +40,7 @@ class DifferentialEvolution:
         for i in range(self.cnf.max_pop):
             self.getFitness(self.pop[i + self.cnf.max_pop])
         self.selection()
+        self.resize_archive()
         self.update_parameter()
         self.reset_parameter()
 
@@ -55,9 +57,18 @@ class DifferentialEvolution:
             num.remove(i)
             if i in best_num:
                 best_num.remove(i)
-            idx = self.cnf.rd.choice(num, 2, replace=False)
-            b_idx = self.cnf.rd.choice(best_num, 1)
-            v = self.pop[i].x + self.pop[i].scaling * (self.pop[b_idx[0]].x - self.pop[i].x) + self.pop[i].scaling * (self.pop[idx[0]].x - self.pop[idx[1]].x)
+            if len(self.archive) == 0:
+                idx = list(self.cnf.rd.choice(num, 2, replace=False))
+            else:
+                idx = list(self.cnf.rd.choice(num, 1))
+                num.remove(idx[0])
+                num.extend(range(self.cnf.max_pop, (self.cnf.max_pop + len(self.archive))))
+                idx.append(self.cnf.rd.choice(num))
+            b_idx = list(self.cnf.rd.choice(best_num, 1))
+            if idx[1] < self.cnf.max_pop:
+                v = self.pop[i].x + self.pop[i].scaling * (self.pop[b_idx[0]].x - self.pop[i].x) + self.pop[i].scaling * (self.pop[idx[0]].x - self.pop[idx[1]].x)
+            else:
+                v = self.pop[i].x + self.pop[i].scaling * (self.pop[b_idx[0]].x - self.pop[i].x) + self.pop[i].scaling * (self.pop[idx[0]].x - self.archive[idx[1] - self.cnf.max_pop].x)
             mut.append(v)
         return mut
 
@@ -88,6 +99,7 @@ class DifferentialEvolution:
     def selection(self):
         for i in range(self.cnf.max_pop):
             if self.pop[i].f >= self.pop[i + self.cnf.max_pop].f:
+                self.archive.append(self.pop[i])
                 self.pop[i] = self.pop[i + self.cnf.max_pop]
                 self.sum_mutNum += 1
                 self.sum_scaling += self.pop[i + self.cnf.max_pop].scaling
@@ -96,6 +108,14 @@ class DifferentialEvolution:
             else:
                 pass
         del self.pop[self.cnf.max_pop : 2 * self.cnf.max_pop]
+
+    # アーカイブのサイズ調整
+    def resize_archive(self):
+        if len(self.archive) > self.cnf.max_pop:
+            while len(self.archive) > self.cnf.max_pop:
+                del self.archive[self.cnf.rd.randint(0, len(self.archive))]
+        else:
+            pass
 
     # 平均値の更新
     def update_parameter(self):
@@ -127,7 +147,7 @@ class Solution:
             self.scaling = cauchy.rvs(loc=scaling_ave, scale=self.cnf.param_scaling)
         if self.scaling > 1.:
             self.scaling = 1.
-        self.CR = np.random.normal(loc=CR_ave, scale=self.cnf.param_CR)
+        self.CR = self.cnf.rd.normal(loc=CR_ave, scale=self.cnf.param_CR)
         self.CR = np.clip(self.CR, 0., 1.)
         # リスト -> ndarray
         self.x = np.array(self.x)
