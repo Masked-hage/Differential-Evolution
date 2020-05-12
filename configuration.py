@@ -14,23 +14,38 @@ class Configuration:
     def __init__(self):
 
         # 入出力設定
-        self.path_out   = "./"                  # 出力先フォルダ
-        self.log_name   = "_result_" + "DE"     # ログの出力先フォルダ(path_outの直下)
-        self.log_out    = True                  # ログ出力の有無
+        self.path_out       = "./"                  # 出力先フォルダ
+        self.log_name       = "_result_" + "DE"     # ログの出力先フォルダ(path_outの直下)
+        self.log_out        = True                  # ログ出力の有無
 
         # DEの設定
-        self.max_pop    = 50                    # 個体数
-        #self.max_gen    = 600                  # 最大世代数(今回はmax_evalsで制限)
-        self.scaling    = 0.5                   # スケーリングファクタ
-        self.CR         = 0.9                   # 継承制御パラメータ
+        self.max_pop        = 50                    # 個体数
+        self.archive_active = False                 # 劣解アーカイブの有効/無効
+        if self.archive_active:
+            self.archive_size = self.max_pop
+        else:
+            self.archive_size = 0
+        self.history_size   = 20                    # 履歴保持数
+        self.init_scaling   = 0.5                   # スケーリングファクタの平均値の初期値
+        self.init_CR        = 0.5                   # 交叉率の平均値の初期値
+        #self.max_gen        = 600                   # 最大世代数(今回はmax_evalsで制限)
+        #self.scaling        = 0.9                   # スケーリングファクタ
+        #self.scaling_min    = 0.5                   # スケーリングファクタの下限
+        #self.scaling_max    = 0.7                   # スケーリングファクタの上限
+        #self.CR             = 0.9                   # 交叉率
+        self.param_scaling  = 0.1                   # スケーリングファクタの尺度パラメータ
+        self.param_CR       = 0.1                   # 交叉率の標準偏差
+        self.learning_R     = 0.1                   # 平均パラメータの学習率
+        self.min_choice_R   = 4                     # current-to-pbestにおける上位選択下限[%]
+        self.max_choice_R   = 20                    # current-to-pbestにおける上位選択上限[%]
 
         # 問題設定
-        self.prob_dim  = 20                     # 問題の次元数
-        self.prob_name = ["F1","F5"]            # 解く問題
+        self.prob_dim       = 20                     # 問題の次元数
+        self.prob_name      = ["F1","F5"]            # 解く問題
 
         # 実験環境
-        self.max_trial = 30                     # 試行回数
-        self.max_evals = 100000                 # 評価回数(max_pop × max_gen)
+        self.max_trial      = 30                     # 試行回数
+        self.max_evals      = 100000                 # 評価回数(max_pop × max_gen)
 
     """ インスタンスメソッド """
     # ランダムシード値設定
