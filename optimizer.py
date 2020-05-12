@@ -19,8 +19,8 @@ class DifferentialEvolution:
         self.fnc            = fnc       # 関数
         self.pop            = []        # 個体群
         self.archive        = []        # 劣解アーカイブ
-        self.scaling_means  = 0.5       # スケーリングファクタの平均値
-        self.CR_means       = 0.5       # 交叉率の平均値
+        self.s_history      = []        # 成功時のパラメータ平均値格納メモリ
+        self.history_idx    = 0         # 履歴メモリのインデックス
         self.sum_mutNum     = 0         # 淘汰の成功回数
         self.sum_scaling    = 0.        # 淘汰成功時のスケーリングファクタの総和
         self.sum_scaling2   = 0.        # 淘汰成功時のスケーリングファクタの二乗和
@@ -29,8 +29,10 @@ class DifferentialEvolution:
     """ インスタンスメソッド """
     # 初期化
     def initializeSolutions(self):
+        for i in range(self.cnf.history_size):
+            self.s_history.append(History(self.cnf.init_scaling, self.cnf.init_CR))
         for i in range(self.cnf.max_pop):
-            self.pop.append(Solution(self.cnf, self.fnc, self.scaling_means, self.CR_means))
+            self.pop.append(Solution(self.cnf, self.fnc, self.s_history))
             self.getFitness(self.pop[i])
 
     # 次世代個体群生成
@@ -53,7 +55,8 @@ class DifferentialEvolution:
         mut = []
         for i in range(self.cnf.max_pop):
             num = list(range(self.cnf.max_pop))
-            best_num = list(range(int(self.cnf.max_pop * self.cnf.choice_R)))
+            choice_R = self.cnf.rd.randint(self.cnf.min_choice_R, self.cnf.max_choice_R) / 100
+            best_num = list(range(int(self.cnf.max_pop * choice_R)))
             num.remove(i)
             if i in best_num:
                 best_num.remove(i)
@@ -74,7 +77,7 @@ class DifferentialEvolution:
 
     # 交叉(binomial交叉)
     def apply_binomial_Xover(self, p_v, p_x):
-        x_next = Solution(self.cnf, self.fnc, self.scaling_means, self.CR_means)
+        x_next = Solution(self.cnf, self.fnc, self.s_history)
         j_rand = self.cnf.rd.randint(0, self.cnf.prob_dim)
         for i in range(self.cnf.prob_dim):
             if self.cnf.rd.rand() <= self.pop[i].CR or i == j_rand:
@@ -119,14 +122,14 @@ class DifferentialEvolution:
 
     # 平均値の更新
     def update_parameter(self):
-        if self.sum_scaling == 0:
-            self.scaling_means = (1 - self.cnf.learning_R) * self.scaling_means
+        if self.sum_scaling != 0 and self.sum_CR != 0:
+            self.s_history[self.history_idx].h_scaling = (1 - self.cnf.learning_R) * self.s_history[self.history_idx].h_scaling + self.cnf.learning_R * self.sum_scaling2 / self.sum_scaling
+            self.s_history[self.history_idx].h_CR = (1 - self.cnf.learning_R) * self.s_history[self.history_idx].h_CR + self.cnf.learning_R * self.sum_CR / self.sum_mutNum
+            self.history_idx += 1
+            if self.history_idx >= self.cnf.history_size:
+                self.history_idx = 0
         else:
-            self.scaling_means = (1 - self.cnf.learning_R) * self.scaling_means + self.cnf.learning_R * self.sum_scaling2 / self.sum_scaling
-        if self.sum_mutNum == 0:
-            self.CR_means = (1 - self.cnf.learning_R) * self.CR_means
-        else:
-            self.CR_means = (1 - self.cnf.learning_R) * self.CR_means + self.cnf.learning_R * self.sum_CR / self.sum_mutNum
+            pass
 
     # パラメータのリセット
     def reset_parameter(self):
@@ -139,15 +142,24 @@ class DifferentialEvolution:
 class Solution:
     """ コンストラクタ """
     # 初期化メソッド
-    def __init__(self, cnf, fnc, scaling_ave, CR_ave):
+    def __init__(self, cnf, fnc, history):
         self.cnf, self.fnc, self.x, self.f, self.scaling, self.CR = cnf, fnc, [], 0., -1., -1.
+        idx = self.cnf.rd.randint(0, self.cnf.history_size)
         # 個体の初期化
         self.x = [self.cnf.rd.uniform(self.fnc.axis_range[0], self.fnc.axis_range[1]) for i in range(self.cnf.prob_dim)]
         while self.scaling < 0.:
-            self.scaling = cauchy.rvs(loc=scaling_ave, scale=self.cnf.param_scaling)
+            self.scaling = cauchy.rvs(loc=history[idx].h_scaling, scale=self.cnf.param_scaling)
         if self.scaling > 1.:
             self.scaling = 1.
-        self.CR = self.cnf.rd.normal(loc=CR_ave, scale=self.cnf.param_CR)
+        self.CR = self.cnf.rd.normal(loc=history[idx].h_CR, scale=self.cnf.param_CR)
         self.CR = np.clip(self.CR, 0., 1.)
         # リスト -> ndarray
         self.x = np.array(self.x)
+
+#履歴メモリのクラス
+class History:
+    """ コンストラクタ """
+    # 初期化メソッド
+    def __init__(self, scaling, CR):
+        self.h_scaling = scaling
+        self.h_CR = CR
