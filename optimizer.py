@@ -114,8 +114,8 @@ class DifferentialEvolution:
 
     # アーカイブのサイズ調整
     def resize_archive(self):
-        if len(self.archive) > self.cnf.max_pop:
-            while len(self.archive) > self.cnf.max_pop:
+        if len(self.archive) > self.cnf.archive_size:
+            while len(self.archive) > self.cnf.archive_size:
                 del self.archive[self.cnf.rd.randint(0, len(self.archive))]
         else:
             pass

@@ -20,6 +20,11 @@ class Configuration:
 
         # DEの設定
         self.max_pop        = 50                    # 個体数
+        self.archive_active = False                 # 劣解アーカイブの有効/無効
+        if self.archive_active:
+            self.archive_size = self.max_pop
+        else:
+            self.archive_size = 0
         self.history_size   = 20                    # 履歴保持数
         self.init_scaling   = 0.5                   # スケーリングファクタの平均値の初期値
         self.init_CR        = 0.5                   # 交叉率の平均値の初期値
