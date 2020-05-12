@@ -7,6 +7,7 @@
 # 他ファイル,モジュールのインポート
 import function as fc
 import numpy as np
+from scipy.stats import cauchy
 
 # 差分進化アルゴリズム（実数）クラス
 class DifferentialEvolution:
@@ -14,41 +15,69 @@ class DifferentialEvolution:
     """ コンストラクタ """
     # 初期化メソッド
     def __init__(self, cnf, fnc):
-        self.cnf = cnf      # 設定
-        self.fnc = fnc      # 関数
-        self.pop = []       # 個体群
+        self.cnf            = cnf       # 設定
+        self.fnc            = fnc       # 関数
+        self.pop            = []        # 個体群
+        self.archive        = []        # 劣解アーカイブ
+        self.scaling_means  = 0.5       # スケーリングファクタの平均値
+        self.CR_means       = 0.5       # 交叉率の平均値
+        self.sum_mutNum     = 0         # 淘汰の成功回数
+        self.sum_scaling    = 0.        # 淘汰成功時のスケーリングファクタの総和
+        self.sum_scaling2   = 0.        # 淘汰成功時のスケーリングファクタの二乗和
+        self.sum_CR         = 0.        # 淘汰成功時の交叉率の総和
 
     """ インスタンスメソッド """
     # 初期化
     def initializeSolutions(self):
         for i in range(self.cnf.max_pop):
-            self.pop.append(Solution(self.cnf, self.fnc))
+            self.pop.append(Solution(self.cnf, self.fnc, self.scaling_means, self.CR_means))
             self.getFitness(self.pop[i])
 
     # 次世代個体群生成
     def getNextPopulation(self):
+        self.sort_Population()
         self.generateOffspring()
         for i in range(self.cnf.max_pop):
             self.getFitness(self.pop[i + self.cnf.max_pop])
         self.selection()
+        self.resize_archive()
+        self.update_parameter()
+        self.reset_parameter()
 
-    # 変異ベクトルの生成(rand/1)
+    # 集団Pのソート(昇順)
+    def sort_Population(self):
+        self.pop.sort(key=lambda func: func.f)
+
+    # 変異ベクトルの生成(current-to-pbest/1)
     def mutation(self):
         mut = []
         for i in range(self.cnf.max_pop):
             num = list(range(self.cnf.max_pop))
+            best_num = list(range(int(self.cnf.max_pop * self.cnf.choice_R)))
             num.remove(i)
-            idx = self.cnf.rd.choice(num, 3, replace=False)
-            v = self.pop[idx[0]].x + self.cnf.scaling * (self.pop[idx[1]].x - self.pop[idx[2]].x)
+            if i in best_num:
+                best_num.remove(i)
+            if len(self.archive) == 0:
+                idx = list(self.cnf.rd.choice(num, 2, replace=False))
+            else:
+                idx = list(self.cnf.rd.choice(num, 1))
+                num.remove(idx[0])
+                num.extend(range(self.cnf.max_pop, (self.cnf.max_pop + len(self.archive))))
+                idx.append(self.cnf.rd.choice(num))
+            b_idx = list(self.cnf.rd.choice(best_num, 1))
+            if idx[1] < self.cnf.max_pop:
+                v = self.pop[i].x + self.pop[i].scaling * (self.pop[b_idx[0]].x - self.pop[i].x) + self.pop[i].scaling * (self.pop[idx[0]].x - self.pop[idx[1]].x)
+            else:
+                v = self.pop[i].x + self.pop[i].scaling * (self.pop[b_idx[0]].x - self.pop[i].x) + self.pop[i].scaling * (self.pop[idx[0]].x - self.archive[idx[1] - self.cnf.max_pop].x)
             mut.append(v)
         return mut
 
     # 交叉(binomial交叉)
     def apply_binomial_Xover(self, p_v, p_x):
-        x_next = Solution(self.cnf, self.fnc, parent=None)
+        x_next = Solution(self.cnf, self.fnc, self.scaling_means, self.CR_means)
         j_rand = self.cnf.rd.randint(0, self.cnf.prob_dim)
         for i in range(self.cnf.prob_dim):
-            if self.cnf.rd.rand() <= self.cnf.CR or i == j_rand:
+            if self.cnf.rd.rand() <= self.pop[i].CR or i == j_rand:
                 x_next.x[i] = p_v[i]
             else:
                 x_next.x[i] = p_x[i]
@@ -70,22 +99,52 @@ class DifferentialEvolution:
     def selection(self):
         for i in range(self.cnf.max_pop):
             if self.pop[i].f >= self.pop[i + self.cnf.max_pop].f:
+                self.archive.append(self.pop[i])
                 self.pop[i] = self.pop[i + self.cnf.max_pop]
+                self.sum_mutNum += 1
+                self.sum_scaling += self.pop[i + self.cnf.max_pop].scaling
+                self.sum_scaling2 += self.pop[i + self.cnf.max_pop].scaling ** 2
+                self.sum_CR += self.pop[i + self.cnf.max_pop].CR
             else:
                 pass
         del self.pop[self.cnf.max_pop : 2 * self.cnf.max_pop]
+
+    # アーカイブのサイズ調整
+    def resize_archive(self):
+        if len(self.archive) > self.cnf.archive_size:
+            while len(self.archive) > self.cnf.archive_size:
+                del self.archive[self.cnf.rd.randint(0, len(self.archive))]
+        else:
+            pass
+
+    # 平均値の更新
+    def update_parameter(self):
+        if self.sum_scaling != 0 and self.sum_CR != 0:
+            self.scaling_means = (1 - self.cnf.learning_R) * self.scaling_means
+            self.CR_means = (1 - self.cnf.learning_R) * self.CR_means
+        else:
+            pass
+
+    # パラメータのリセット
+    def reset_parameter(self):
+        self.sum_mutNum     = 0
+        self.sum_scaling    = 0.
+        self.sum_scaling2   = 0.
+        self.sum_CR         = 0.
 
 #個体のクラス
 class Solution:
     """ コンストラクタ """
     # 初期化メソッド
-    def __init__(self, cnf, fnc, parent=None):
-        self.cnf, self.fnc, self.x, self.f = cnf, fnc, [], 0.
+    def __init__(self, cnf, fnc, scaling_ave, CR_ave):
+        self.cnf, self.fnc, self.x, self.f, self.scaling, self.CR = cnf, fnc, [], 0., -1., -1.
         # 個体の初期化
-        if parent == None:
-            self.x = [self.cnf.rd.uniform(self.fnc.axis_range[0], self.fnc.axis_range[1]) for i in range(self.cnf.prob_dim)]
-        # 親個体のコピー
-        else:
-            self.x = [parent.x[i] for i in range(self.cnf.prob_dim)]
+        self.x = [self.cnf.rd.uniform(self.fnc.axis_range[0], self.fnc.axis_range[1]) for i in range(self.cnf.prob_dim)]
+        while self.scaling < 0.:
+            self.scaling = cauchy.rvs(loc=scaling_ave, scale=self.cnf.param_scaling)
+        if self.scaling > 1.:
+            self.scaling = 1.
+        self.CR = self.cnf.rd.normal(loc=CR_ave, scale=self.cnf.param_CR)
+        self.CR = np.clip(self.CR, 0., 1.)
         # リスト -> ndarray
         self.x = np.array(self.x)
