@@ -25,14 +25,9 @@ class Configuration:
             self.archive_size = self.max_pop
         else:
             self.archive_size = 0
-        self.history_size   = 140                   # 履歴保持数
+        self.history_size   = 800                   # 履歴保持数
         self.init_scaling   = 0.5                   # スケーリングファクタの平均値の初期値
         self.init_CR        = 0.5                   # 交叉率の平均値の初期値
-        #self.max_gen        = 600                   # 最大世代数(今回はmax_evalsで制限)
-        #self.scaling        = 0.9                   # スケーリングファクタ
-        #self.scaling_min    = 0.5                   # スケーリングファクタの下限
-        #self.scaling_max    = 0.7                   # スケーリングファクタの上限
-        #self.CR             = 0.9                   # 交叉率
         self.param_scaling  = 0.1                   # スケーリングファクタの尺度パラメータ
         self.param_CR       = 0.1                   # 交叉率の標準偏差
         self.learning_R     = 0.1                   # 平均パラメータの学習率
